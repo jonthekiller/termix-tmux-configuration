@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+*.log
+.env
+*.tmxplug
+*.tmxplug.sig
+termix-plugin-signing.key
+.termix-tables-*
+deploy/plugins/

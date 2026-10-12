@@ -1,0 +1,252 @@
+{
+  "common": {
+    "on": "Activé",
+    "off": "Désactivé",
+    "apply": "Appliquer",
+    "applyToSelection": "Appliquer à la sélection",
+    "applyToAll": "Appliquer à tous les hôtes",
+    "preview": "Prévisualiser",
+    "saved": "Enregistré",
+    "error": "Une erreur est survenue.",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "delete": "Supprimer",
+    "save": "Enregistrer",
+    "name": "Nom",
+    "actions": "Actions",
+    "loading": "Chargement…",
+    "none": "Aucun",
+    "allHosts": "Tous les hôtes",
+    "folder": "Dossier",
+    "tag": "Tag",
+    "origin": {
+      "host": "hôte",
+      "folder": "dossier",
+      "user": "utilisateur",
+      "server": "serveur"
+    }
+  },
+  "tab": {
+    "title": "Configuration Tmux",
+    "subtitle": "Gérez la configuration tmux de vos hôtes : par hôte, par dossier, par tag ou pour toutes les machines.",
+    "empty": "Aucun hôte SSH pour le moment.",
+    "loadError": "Impossible de charger les hôtes.",
+    "hostsHeading": "Hôtes",
+    "effectiveHeading": "Configuration effective",
+    "selectionHeading": "Sélection",
+    "profilesHeading": "Profils",
+    "historyHeading": "Historique d'application",
+    "profilePlaceholder": "Nom du nouveau profil",
+    "saveProfile": "Enregistrer la sélection comme profil",
+    "noSelection": "Sélectionnez des hôtes pour appliquer une configuration.",
+    "applyStarted": "Application de la configuration…",
+    "applyDone": "Appliqué : {{ok}} ok, {{failed}} en échec.",
+    "originTooltip": "D'où vient cette valeur."
+  },
+  "preview": {
+    "title": "Prévisualisation de la configuration",
+    "fileHeading": "Poussé vers ~/.termix/tmux.conf",
+    "commandsHeading": "Commandes exécutées sur les sessions live",
+    "snippetHeading": "Extrait utilisateur (sourcé après le fichier généré)",
+    "none": "Aucun hôte sélectionné.",
+    "error": "Impossible de construire la prévisualisation."
+  },
+  "hosts": {
+    "tabTmuxConfiguration": "Configuration Tmux",
+    "enable": "Activer la configuration Tmux",
+    "name": "Nom",
+    "folder": "Dossier",
+    "tags": "Tags",
+    "tmux": "tmux",
+    "autoApply": "Application auto",
+    "origin": "Origine",
+    "lastApplied": "Dernière application",
+    "enableDesc": "Afficher cet hôte dans le Moniteur Tmux et ajouter ses actions tmux à la barre latérale.",
+    "tabTmuxMonitor": "Moniteur Tmux"
+  },
+  "apply": {
+    "ok": "Configuration appliquée",
+    "tmuxMissing": "tmux n'est pas installé sur cet hôte",
+    "failed": "Échec de l'application",
+    "skipped": "Ignoré (désactivé pour cet hôte)"
+  },
+  "hostEditor": {
+    "title": "Configuration Tmux",
+    "description": "Options appliquées aux sessions tmux de cet hôte. Les valeurs laissées par défaut suivent les défauts du dossier, de l'utilisateur ou du serveur.",
+    "historyLimit": "Limite d'historique",
+    "mouse": "Souris",
+    "renumberWindows": "Renuméroter les fenêtres",
+    "setClipboard": "Presse-papiers",
+    "remainOnExit": "Conserver le volet après sortie de la commande",
+    "exitEmpty": "Arrêter le serveur à la fermeture de la dernière session",
+    "customOptions": "Options personnalisées (JSON)",
+    "environment": "Variables d'environnement (JSON)",
+    "configSnippet": "Commandes tmux supplémentaires",
+    "sessionNamePattern": "Modèle de nom de session",
+    "sessionNamePatternVariables": "Variables : {user} {sshUser} {host} {hostId} {date} {time} {datetime} {timestamp} {uuid} {random}"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utiliser Configuration Tmux",
+      "description": "Voir les hôtes, modifier leurs options tmux et appliquer des configurations en SSH."
+    },
+    "sessions": {
+      "title": "Piloter la création des sessions tmux",
+      "description": "Laisser le terminal utiliser le service tmux.sessions de ce plugin : les sessions sont créées et attachées avec la configuration gérée ici."
+    }
+  },
+  "settings": {
+    "admin": {
+      "defaultForNewHosts": {
+        "label": "Activer pour les nouveaux hôtes",
+        "description": "Pré-activer la configuration Tmux sur les hôtes qui n'ont pas encore de réglage explicite."
+      },
+      "applyParallelism": {
+        "label": "Parallélisme d'application",
+        "description": "Nombre d'hôtes configurés simultanément lors d'une application groupée."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Activer la configuration Tmux",
+        "description": "Autoriser ce plugin à gérer les options tmux de cet hôte."
+      },
+      "historyLimit": {
+        "label": "Limite d'historique",
+        "description": "history-limit : nombre de lignes conservées dans le défilement de chaque volet."
+      },
+      "mouse": {
+        "label": "Souris",
+        "description": "mouse : prise en charge de la souris dans les sessions tmux.",
+        "on": "Activée",
+        "off": "Désactivée"
+      },
+      "renumberWindows": {
+        "label": "Renuméroter les fenêtres",
+        "description": "renumber-windows : renuméroter les fenêtres séquentiellement à la fermeture."
+      },
+      "setClipboard": {
+        "label": "Presse-papiers",
+        "description": "set-clipboard : comment les copies tmux atteignent le presse-papiers système.",
+        "external": "Externe (OSC 52)",
+        "internal": "Interne",
+        "off": "Désactivé"
+      },
+      "remainOnExit": {
+        "label": "Conserver le volet après sortie",
+        "description": "remain-on-exit : garder le volet visible quand sa commande se termine."
+      },
+      "exitEmpty": {
+        "label": "Arrêter le serveur à la dernière session",
+        "description": "exit-empty : arrêter le serveur tmux quand la dernière session est fermée."
+      },
+      "customOptions": {
+        "label": "Options personnalisées",
+        "description": "Options tmux supplémentaires en objet JSON, ex. {\"default-shell\": \"/bin/zsh\"}."
+      },
+      "environment": {
+        "label": "Variables d'environnement",
+        "description": "Variables posées avec set-environment -g, en objet JSON."
+      },
+      "configSnippet": {
+        "label": "Commandes tmux supplémentaires",
+        "description": "Commandes tmux brutes ajoutées au fichier de config poussé (une par ligne)."
+      },
+      "sessionNamePattern": {
+        "label": "Modèle de nom de session",
+        "description": "Nomme les nouvelles sessions tmux de cet hôte. Variables : {user} (login Termix), {sshUser}, {host}, {hostId}, {date}, {time}, {datetime}, {timestamp}, {uuid}, {random}. Vide : nom par défaut du terminal."
+      }
+    }
+  },
+  "integration": {
+    "conflict": "Tmux Monitor pilote actuellement la création des sessions tmux du terminal (conflit de service avec {{plugin}}). La configuration reste appliquée aux sessions live et à l'application auto ; désactivez Tmux Monitor pour que les sessions soient créées avec les options de ce plugin.",
+    "serviceInactive": "La création de sessions ne suit pas les options de ce plugin pour le moment (le fournisseur tmux du terminal est indisponible ou détenu par un autre plugin). La configuration reste appliquée aux sessions live et à l'application auto."
+  },
+  "nav": {
+    "tmuxMonitor": "Moniteur Tmux"
+  },
+  "tmuxMonitor": {
+    "title": "Moniteur Tmux",
+    "failedToLoadHosts": "Échec du chargement des hôtes",
+    "failedToLoad": "Échec du chargement des sessions tmux",
+    "tmuxUnavailable": "tmux n'est pas installé sur cet hôte",
+    "noSessions": "Aucune session tmux sur cet hôte",
+    "noHostSelected": "Aucun hôte sélectionné",
+    "attached": "Attaché",
+    "detached": "Détaché",
+    "attach": "Attacher",
+    "editTags": "Modifier les tags",
+    "tagsHint": "Tags séparés par des virgules (ex. YOLO, lab, training)",
+    "tagsSaved": "Tags enregistrés",
+    "tagsSaveFailed": "Échec de l'enregistrement des tags",
+    "searchPlaceholder": "Rechercher dans la sortie des sessions…",
+    "searchResults": "{{count}} correspondances",
+    "searchFailed": "Échec de la recherche",
+    "selectPaneHint": "Sélectionnez un volet pour prévisualiser sa sortie",
+    "closePreview": "Fermer l'aperçu",
+    "newSession": "Nouvelle session",
+    "newSessionHint": "Nom de session (lettres, chiffres, _ @ % + = -)",
+    "newSessionPlaceholder": "ma-session",
+    "create": "Créer",
+    "sessionCreated": "Session « {{name}} » créée",
+    "sessionCreateFailed": "Échec de la création de la session",
+    "splitRight": "Diviser à droite",
+    "splitDown": "Diviser vers le bas",
+    "splitFailed": "Échec de la division du volet",
+    "newWindow": "Nouvelle fenêtre",
+    "windowCreateFailed": "Échec de la création de la fenêtre",
+    "attachSessionTooltip": "Attacher à {{session}}",
+    "refresh": "Rafraîchir",
+    "refreshFailed": "Échec du rafraîchissement des sessions",
+    "collapseAll": "Tout replier",
+    "expandAll": "Tout déplier",
+    "moreActions": "Plus d'actions",
+    "sessionStats": "Statistiques de session",
+    "renameSessionTitle": "Renommer la session « {{name}} »",
+    "rename": "Renommer",
+    "sessionRenamed": "Session renommée en « {{name}} »",
+    "sessionRenameFailed": "Échec du renommage de la session",
+    "editTagsTitle": "Modifier les tags de « {{name}} »",
+    "killPane": "Tuer le volet",
+    "resizeTree": "Glisser pour redimensionner, double-clic pour réinitialiser",
+    "reattach": "Se rattacher (corrige un affichage corrompu)",
+    "killWindow": "Tuer la fenêtre",
+    "killWindowTitle": "Tuer la fenêtre {{index}} de « {{session}} » ?",
+    "killWindowBody": "Tous les volets et processus de cette fenêtre seront terminés. Tuer la dernière fenêtre met fin à la session.",
+    "windowKillFailed": "Échec de la suppression de la fenêtre",
+    "statusActivity": "Activité",
+    "statusWindows": "Fenêtres",
+    "statusPanes": "volets",
+    "statusTags": "Tags",
+    "killPaneTitle": "Tuer le volet {{id}} ?",
+    "killPaneBody": "Le processus lancé dans ce volet sera terminé. Tuer le dernier volet ferme sa fenêtre.",
+    "paneKillFailed": "Échec de la suppression du volet",
+    "killSessionTitle": "Tuer la session « {{name}} » ?",
+    "killSessionBody": "Toutes les fenêtres et processus en cours de cette session seront terminés. Irréversible.",
+    "kill": "Tuer",
+    "sessionKilled": "Session « {{name}} » tuée",
+    "sessionKillFailed": "Échec de la suppression de la session",
+    "hostUnreachable": "Impossible de se connecter à l'hôte. Vérifiez qu'il est en ligne et joignable.",
+    "noServer": "Aucun serveur tmux ne tourne sur cet hôte.",
+    "searchTruncated": "Résultats partiels. La recherche couvre les {{lines}} dernières lignes de chaque volet et au plus {{panes}} volets.",
+    "closeSearchResults": "Fermer les résultats",
+    "retry": "Réessayer",
+    "noHosts": "Aucun hôte SSH disponible",
+    "noHostsHint": "Activez l'option Moniteur Tmux sur un hôte SSH (Gestionnaire d'hôtes, onglet Moniteur Tmux) pour surveiller ses sessions tmux.",
+    "tmuxInstallHint": "Installez-le sur l'hôte avec :",
+    "attachTooltip": "Ouvrir un terminal vers {{host}}",
+    "attachTooltipPane": "Ouvrir un terminal vers {{host}}, session tmux {{session}}",
+    "timeJustNow": "à l'instant",
+    "timeMinutes": "il y a {{count}} min",
+    "timeHours": "il y a {{count}} h",
+    "timeDays": "il y a {{count}} j",
+    "allHosts": "Tous les hôtes",
+    "singleHost": "Hôte unique",
+    "hostScope": "Portée du moniteur",
+    "filterHosts": "Filtrer les hôtes par nom ou adresse",
+    "selectHost": "Sélectionner un hôte",
+    "toggleHost": "Déplier ou replier {{host}}",
+    "noMatchingHosts": "Aucun hôte correspondant",
+    "toggleSession": "Déplier ou replier {{session}}"
+  }
+}

@@ -1,0 +1,252 @@
+{
+  "common": {
+    "on": "On",
+    "off": "Off",
+    "apply": "Apply",
+    "applyToSelection": "Apply to selection",
+    "applyToAll": "Apply to all hosts",
+    "preview": "Preview",
+    "saved": "Saved",
+    "error": "Something went wrong.",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "save": "Save",
+    "name": "Name",
+    "actions": "Actions",
+    "loading": "Loading…",
+    "none": "None",
+    "allHosts": "All hosts",
+    "folder": "Folder",
+    "tag": "Tag",
+    "origin": {
+      "host": "host",
+      "folder": "folder",
+      "user": "user",
+      "server": "server"
+    }
+  },
+  "tab": {
+    "title": "Tmux Configuration",
+    "subtitle": "Manage the tmux configuration of your hosts: per host, per folder, per tag or for every machine.",
+    "empty": "No SSH hosts yet.",
+    "loadError": "Could not load hosts.",
+    "hostsHeading": "Hosts",
+    "effectiveHeading": "Effective configuration",
+    "selectionHeading": "Selection",
+    "profilesHeading": "Profiles",
+    "historyHeading": "Application history",
+    "profilePlaceholder": "New profile name",
+    "saveProfile": "Save selection as profile",
+    "noSelection": "Select hosts to apply a configuration.",
+    "applyStarted": "Applying configuration…",
+    "applyDone": "Applied: {{ok}} ok, {{failed}} failed.",
+    "originTooltip": "Where this value comes from."
+  },
+  "preview": {
+    "title": "Configuration preview",
+    "fileHeading": "Pushed to ~/.termix/tmux.conf",
+    "commandsHeading": "Commands run on live sessions",
+    "snippetHeading": "User snippet (sourced after the generated file)",
+    "none": "No host selected.",
+    "error": "Could not build the preview."
+  },
+  "hosts": {
+    "tabTmuxConfiguration": "Tmux Configuration",
+    "enable": "Enable Tmux Configuration",
+    "name": "Name",
+    "folder": "Folder",
+    "tags": "Tags",
+    "tmux": "tmux",
+    "autoApply": "Auto-apply",
+    "origin": "Origin",
+    "lastApplied": "Last applied",
+    "enableDesc": "Show this host in the Tmux Monitor and add its tmux actions to the sidebar.",
+    "tabTmuxMonitor": "Tmux Monitor"
+  },
+  "apply": {
+    "ok": "Configuration applied",
+    "tmuxMissing": "tmux is not installed on this host",
+    "failed": "Application failed",
+    "skipped": "Skipped (disabled for this host)"
+  },
+  "hostEditor": {
+    "title": "Tmux Configuration",
+    "description": "Options applied to tmux sessions on this host. Values left on their default follow the folder, user or server defaults.",
+    "historyLimit": "History limit",
+    "mouse": "Mouse",
+    "renumberWindows": "Renumber windows",
+    "setClipboard": "Clipboard",
+    "remainOnExit": "Keep pane after command exits",
+    "exitEmpty": "Close server when last session exits",
+    "customOptions": "Custom options (JSON)",
+    "environment": "Environment variables (JSON)",
+    "configSnippet": "Extra tmux commands",
+    "sessionNamePattern": "Session name pattern",
+    "sessionNamePatternVariables": "Variables: {user} {sshUser} {host} {hostId} {date} {time} {datetime} {timestamp} {uuid} {random}"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Tmux Configuration",
+      "description": "View hosts, edit their tmux options and apply configurations over SSH."
+    },
+    "sessions": {
+      "title": "Drive tmux session creation",
+      "description": "Let the terminal use this plugin's tmux.sessions service: sessions are created and attached with the configuration managed here."
+    }
+  },
+  "settings": {
+    "admin": {
+      "defaultForNewHosts": {
+        "label": "Enable for new hosts",
+        "description": "Pre-enable Tmux Configuration on hosts that do not have an explicit setting yet."
+      },
+      "applyParallelism": {
+        "label": "Apply parallelism",
+        "description": "How many hosts are configured at the same time during a bulk apply."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Enable Tmux Configuration",
+        "description": "Let this plugin manage the tmux options of this host."
+      },
+      "historyLimit": {
+        "label": "History limit",
+        "description": "history-limit: number of lines kept in each pane's scrollback."
+      },
+      "mouse": {
+        "label": "Mouse",
+        "description": "mouse: mouse support in tmux sessions.",
+        "on": "On",
+        "off": "Off"
+      },
+      "renumberWindows": {
+        "label": "Renumber windows",
+        "description": "renumber-windows: renumber windows sequentially when one is closed."
+      },
+      "setClipboard": {
+        "label": "Clipboard",
+        "description": "set-clipboard: how tmux copies reach the system clipboard.",
+        "external": "External (OSC 52)",
+        "internal": "Internal",
+        "off": "Off"
+      },
+      "remainOnExit": {
+        "label": "Keep pane after command exits",
+        "description": "remain-on-exit: keep the pane visible when its command exits."
+      },
+      "exitEmpty": {
+        "label": "Close server when last session exits",
+        "description": "exit-empty: shut the tmux server down when the last session is closed."
+      },
+      "customOptions": {
+        "label": "Custom options",
+        "description": "Extra tmux options as a JSON object, e.g. {\"default-shell\": \"/bin/zsh\"}."
+      },
+      "environment": {
+        "label": "Environment variables",
+        "description": "Variables set with set-environment -g as a JSON object."
+      },
+      "configSnippet": {
+        "label": "Extra tmux commands",
+        "description": "Raw tmux commands appended to the pushed config file (one per line)."
+      },
+      "sessionNamePattern": {
+        "label": "Session name pattern",
+        "description": "Names new tmux sessions on this host. Variables: {user} (Termix login), {sshUser}, {host}, {hostId}, {date}, {time}, {datetime}, {timestamp}, {uuid}, {random}. Empty keeps the terminal's default name."
+      }
+    }
+  },
+  "integration": {
+    "conflict": "Tmux Monitor currently drives tmux session creation for the terminal (service conflict with {{plugin}}). Configuration is still applied to live sessions and on auto-apply; disable Tmux Monitor to have sessions created with this plugin's options.",
+    "serviceInactive": "Session creation does not follow this plugin's options right now (the terminal's tmux provider is unavailable or another plugin holds it). Configuration is still applied to live sessions and on auto-apply."
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux Monitor"
+  },
+  "tmuxMonitor": {
+    "title": "Tmux Monitor",
+    "failedToLoadHosts": "Failed to load hosts",
+    "failedToLoad": "Failed to load tmux sessions",
+    "tmuxUnavailable": "tmux is not installed on this host",
+    "noSessions": "No tmux sessions on this host",
+    "noHostSelected": "No host selected",
+    "attached": "Attached",
+    "detached": "Detached",
+    "attach": "Attach",
+    "editTags": "Edit tags",
+    "tagsHint": "Comma-separated tags (e.g. YOLO, lab, training)",
+    "tagsSaved": "Tags saved",
+    "tagsSaveFailed": "Failed to save tags",
+    "searchPlaceholder": "Search output across sessions...",
+    "searchResults": "{{count}} matches",
+    "searchFailed": "Search failed",
+    "selectPaneHint": "Select a pane to preview its output",
+    "closePreview": "Close preview",
+    "newSession": "New session",
+    "newSessionHint": "Session name (letters, digits, _ @ % + = -)",
+    "newSessionPlaceholder": "my-session",
+    "create": "Create",
+    "sessionCreated": "Session \"{{name}}\" created",
+    "sessionCreateFailed": "Failed to create session",
+    "splitRight": "Split right",
+    "splitDown": "Split down",
+    "splitFailed": "Failed to split pane",
+    "newWindow": "New window",
+    "windowCreateFailed": "Failed to create window",
+    "attachSessionTooltip": "Attach to {{session}}",
+    "refresh": "Refresh",
+    "refreshFailed": "Failed to refresh sessions",
+    "collapseAll": "Collapse all",
+    "expandAll": "Expand all",
+    "moreActions": "More actions",
+    "sessionStats": "Session stats",
+    "renameSessionTitle": "Rename session \"{{name}}\"",
+    "rename": "Rename",
+    "sessionRenamed": "Session renamed to \"{{name}}\"",
+    "sessionRenameFailed": "Failed to rename session",
+    "editTagsTitle": "Edit tags for \"{{name}}\"",
+    "killPane": "Kill pane",
+    "resizeTree": "Drag to resize, double-click to reset",
+    "reattach": "Re-attach (fixes a garbled view)",
+    "killWindow": "Kill window",
+    "killWindowTitle": "Kill window {{index}} of \"{{session}}\"?",
+    "killWindowBody": "Every pane and process in this window will be terminated. Killing the last window ends the session.",
+    "windowKillFailed": "Failed to kill window",
+    "statusActivity": "Activity",
+    "statusWindows": "Windows",
+    "statusPanes": "panes",
+    "statusTags": "Tags",
+    "killPaneTitle": "Kill pane {{id}}?",
+    "killPaneBody": "The process running in this pane will be terminated. Killing the last pane closes its window.",
+    "paneKillFailed": "Failed to kill pane",
+    "killSessionTitle": "Kill session \"{{name}}\"?",
+    "killSessionBody": "All windows and running processes in this session will be terminated. This cannot be undone.",
+    "kill": "Kill",
+    "sessionKilled": "Session \"{{name}}\" killed",
+    "sessionKillFailed": "Failed to kill session",
+    "hostUnreachable": "Could not connect to the host. Check that it is online and reachable.",
+    "noServer": "No tmux server is running on this host.",
+    "searchTruncated": "Partial results. Search covers the last {{lines}} lines of each pane and at most {{panes}} panes.",
+    "closeSearchResults": "Close search results",
+    "retry": "Retry",
+    "noHosts": "No SSH hosts available",
+    "noHostsHint": "Enable the Tmux Monitor option on an SSH host (Host Manager, Tmux Monitor tab) to monitor its tmux sessions.",
+    "tmuxInstallHint": "Install it on the host with:",
+    "attachTooltip": "Open a terminal to {{host}}",
+    "attachTooltipPane": "Open a terminal to {{host}}, tmux session {{session}}",
+    "timeJustNow": "just now",
+    "timeMinutes": "{{count}}m ago",
+    "timeHours": "{{count}}h ago",
+    "timeDays": "{{count}}d ago",
+    "allHosts": "All hosts",
+    "singleHost": "Single host",
+    "hostScope": "Monitor scope",
+    "filterHosts": "Filter hosts by name or address",
+    "selectHost": "Select host",
+    "toggleHost": "Expand or collapse {{host}}",
+    "noMatchingHosts": "No matching hosts",
+    "toggleSession": "Expand or collapse {{session}}"
+  }
+}

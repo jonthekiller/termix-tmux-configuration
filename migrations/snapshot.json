@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "tables": {
+    "session_tags": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "sessionName": {
+          "type": "text",
+          "notNull": true
+        },
+        "tag": {
+          "type": "text",
+          "notNull": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": []
+    },
+    "profiles": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "options": {
+          "type": "text",
+          "notNull": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_p_tmux_configuration_profiles_user",
+          "columns": ["userId"]
+        }
+      ]
+    },
+    "apply_runs": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "hostName": {
+          "type": "text",
+          "notNull": true
+        },
+        "ok": {
+          "type": "boolean",
+          "notNull": true
+        },
+        "reason": {
+          "type": "text"
+        },
+        "sessionsTouched": {
+          "type": "integer",
+          "notNull": true,
+          "defaultValue": 0
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_p_tmux_configuration_runs_host",
+          "columns": ["hostId"]
+        }
+      ]
+    }
+  }
+}

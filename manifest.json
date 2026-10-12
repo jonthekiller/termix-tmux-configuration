@@ -1,0 +1,237 @@
+{
+  "id": "tmux-configuration",
+  "name": "Tmux Configuration",
+  "version": "1.0.0",
+  "description": "Manage the tmux configuration of your hosts: per host, per folder, per tag or for every machine, with server/user/folder defaults, profiles and one-click (or automatic) application over SSH.",
+  "author": {
+    "name": "Jonthekiller",
+    "url": "https://github.com/jonthekiller"
+  },
+  "license": "Apache-2.0",
+  "repository": "https://github.com/jonthekiller/termix-tmux-configuration",
+  "category": "Terminal",
+  "icon": "Settings2",
+  "engine": {
+    "termix": ">=26.10.0",
+    "api": "^1.2"
+  },
+  "capabilities": [
+    "hosts:read",
+    "credentials:use",
+    "ssh:connect",
+    "db:own",
+    "network:serve",
+    "ui:surface",
+    "events:core",
+    "db:core-refs"
+  ],
+  "provides": [
+    {
+      "service": "tmux.sessions",
+      "version": "1.0.0",
+      "permission": "tmux-configuration.sessions"
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "tmux_configuration",
+        "titleKey": "tab.title",
+        "icon": "Settings2",
+        "openFrom": ["rail", "host-context-menu", "palette"]
+      },
+      {
+        "id": "tmux_monitor",
+        "titleKey": "nav.tmuxMonitor",
+        "icon": "Layers",
+        "openFrom": ["rail", "host-context-menu", "palette"]
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      },
+      {
+        "name": "sessions",
+        "titleKey": "permissions.sessions.title",
+        "descriptionKey": "permissions.sessions.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "defaultForNewHosts",
+          "type": "boolean",
+          "labelKey": "settings.admin.defaultForNewHosts.label",
+          "descriptionKey": "settings.admin.defaultForNewHosts.description",
+          "default": false
+        },
+        {
+          "key": "applyParallelism",
+          "type": "number",
+          "labelKey": "settings.admin.applyParallelism.label",
+          "descriptionKey": "settings.admin.applyParallelism.description",
+          "default": 5,
+          "min": 1,
+          "max": 20
+        }
+      ],
+      "host": {
+        "enableKey": "enableTmuxConfiguration",
+        "enableLabelKey": "settings.host.enable.label",
+        "enableDescriptionKey": "settings.host.enable.description",
+        "enableDefault": false,
+        "editorGroup": "ssh",
+        "editorOrder": 46,
+        "fields": [
+          {
+            "key": "historyLimit",
+            "type": "number",
+            "labelKey": "settings.host.historyLimit.label",
+            "descriptionKey": "settings.host.historyLimit.description",
+            "default": 50000,
+            "min": 1000,
+            "max": 100000000
+          },
+          {
+            "key": "mouse",
+            "type": "select",
+            "labelKey": "settings.host.mouse.label",
+            "descriptionKey": "settings.host.mouse.description",
+            "default": "on",
+            "options": [
+              {
+                "value": "on",
+                "labelKey": "settings.host.mouse.on"
+              },
+              {
+                "value": "off",
+                "labelKey": "settings.host.mouse.off"
+              }
+            ]
+          },
+          {
+            "key": "renumberWindows",
+            "type": "select",
+            "labelKey": "settings.host.renumberWindows.label",
+            "descriptionKey": "settings.host.renumberWindows.description",
+            "default": "off",
+            "options": [
+              {
+                "value": "on",
+                "labelKey": "common.on"
+              },
+              {
+                "value": "off",
+                "labelKey": "common.off"
+              }
+            ]
+          },
+          {
+            "key": "setClipboard",
+            "type": "select",
+            "labelKey": "settings.host.setClipboard.label",
+            "descriptionKey": "settings.host.setClipboard.description",
+            "default": "external",
+            "options": [
+              {
+                "value": "external",
+                "labelKey": "settings.host.setClipboard.external"
+              },
+              {
+                "value": "internal",
+                "labelKey": "settings.host.setClipboard.internal"
+              },
+              {
+                "value": "off",
+                "labelKey": "settings.host.setClipboard.off"
+              }
+            ]
+          },
+          {
+            "key": "remainOnExit",
+            "type": "select",
+            "labelKey": "settings.host.remainOnExit.label",
+            "descriptionKey": "settings.host.remainOnExit.description",
+            "default": "off",
+            "options": [
+              {
+                "value": "on",
+                "labelKey": "common.on"
+              },
+              {
+                "value": "off",
+                "labelKey": "common.off"
+              }
+            ]
+          },
+          {
+            "key": "exitEmpty",
+            "type": "select",
+            "labelKey": "settings.host.exitEmpty.label",
+            "descriptionKey": "settings.host.exitEmpty.description",
+            "default": "on",
+            "options": [
+              {
+                "value": "on",
+                "labelKey": "common.on"
+              },
+              {
+                "value": "off",
+                "labelKey": "common.off"
+              }
+            ]
+          },
+          {
+            "key": "sessionNamePattern",
+            "type": "string",
+            "labelKey": "settings.host.sessionNamePattern.label",
+            "descriptionKey": "settings.host.sessionNamePattern.description",
+            "default": ""
+          },
+          {
+            "key": "customOptions",
+            "type": "json",
+            "labelKey": "settings.host.customOptions.label",
+            "descriptionKey": "settings.host.customOptions.description",
+            "default": {}
+          },
+          {
+            "key": "environment",
+            "type": "json",
+            "labelKey": "settings.host.environment.label",
+            "descriptionKey": "settings.host.environment.description",
+            "default": {}
+          },
+          {
+            "key": "configSnippet",
+            "type": "textarea",
+            "labelKey": "settings.host.configSnippet.label",
+            "descriptionKey": "settings.host.configSnippet.description",
+            "default": "# -----------------------------------------------------------------------------\n# Mode copie / scroll (vim)\n# -----------------------------------------------------------------------------\nsetw -g mode-keys vi\n\n# Scroll fluide dans le mode copie\nbind -T copy-mode-vi WheelUpPane select-pane \\; send-keys -X -N 2 scroll-up\nbind -T copy-mode-vi WheelDownPane select-pane \\; send-keys -X -N 2 scroll-down\n\n# -----------------------------------------------------------------------------\n# Status Bar Minimaliste\n# -----------------------------------------------------------------------------\nset -g status on\nset -g status-justify centre\nset -g status-left \"\"\nset -g status-right \"#[fg=green]#H#[default] | #[fg=cyan]%Y-%m-%d#[default] | #[fg=yellow]%H:%M#[default]\"\nset -g status-style \"bg=black,fg=white\"\n\n# -----------------------------------------------------------------------------\n# Keybindings utiles\n# -----------------------------------------------------------------------------\n# Reload de la config gérée par le plugin\nbind r source-file ~/.termix/tmux.conf \\; display-message \"Config reloaded!\"\n\n# Split panes\nbind | split-window -h\nbind - split-window -v\n\n# Navigation entre panes (vim-like)\nbind h select-pane -L\nbind j select-pane -D\nbind k select-pane -U\nbind l select-pane -R\n\n# Resize panes\nbind -r H resize-pane -L 5\nbind -r J resize-pane -D 5\nbind -r K resize-pane -U 5\nbind -r L resize-pane -R 5\n\n# -----------------------------------------------------------------------------\n# Colors & UI\n# -----------------------------------------------------------------------------\nset -g default-terminal \"screen-256color\"\nsetw -g aggressive-resize on\n\n# -----------------------------------------------------------------------------\n# Plugins (TPM - Tmux Plugin Manager) - Optionnel\n# -----------------------------------------------------------------------------\n# set -g @plugin 'tmux-plugins/tpm'\n# set -g @plugin 'tmux-plugins/tmux-sensible'\n# set -g @plugin 'tmux-plugins/tmux-yank'\n# run '~/.tmux/plugins/tpm/tpm'"
+          }
+        ]
+      }
+    },
+    "hostCapability": {
+      "key": "enableTmuxConfiguration",
+      "labelKey": "hosts.tabTmuxConfiguration",
+      "editorTab": "tmux-configuration"
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"],
+  "docs": "https://github.com/jonthekiller/termix-tmux-configuration#readme",
+  "features": [
+    "Per host, per folder, per tag and fleet-wide tmux options",
+    "Server, user and folder defaults with host-level overrides",
+    "Config pushed to ~/.termix/tmux.conf and applied to live sessions",
+    "Session name patterns with {user}, {host}, {date}\u2026 variables",
+    "Full Tmux Monitor: session tree, pane preview, search and metrics",
+    "Profiles, bulk apply with per-host reports and application history"
+  ]
+}

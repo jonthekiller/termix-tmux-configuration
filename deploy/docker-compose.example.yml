@@ -1,0 +1,41 @@
+services:
+  termix:
+    image: ghcr.io/lukegus/termix:2.9.2
+    container_name: termix
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - termix-data:/app/data
+      # The plugin folder. Keep it under /app/data so the backend bundle's
+      # external imports (express, drizzle-orm) resolve through
+      # /app/node_modules. Layout: plugins/tmux-configuration/{manifest.json,dist/,locales/,migrations/}
+      - ./plugins:/app/data/plugins
+    environment:
+      PORT: "8080"
+      GUACD_HOST: "guacd"
+      GUACD_TUNNEL_HOST: "termix"
+      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
+      GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
+      # Set to "true" in hardened deployments: then plugins may only be
+      # installed as .tmxplug artifacts signed by a key pinned in the shell.
+      # TERMIX_REQUIRE_SIGNED_PLUGINS: "true"
+    depends_on:
+      - guacd
+    networks:
+      - termix-net
+
+  guacd:
+    image: guacamole/guacd:1.6.0
+    container_name: guacd
+    restart: unless-stopped
+    volumes:
+      - termix-data:/termix-data
+    networks:
+      - termix-net
+
+volumes:
+  termix-data:
+
+networks:
+  termix-net:
