@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+### Changed
+
+- The generated config is now pushed to `~/.tmux.conf` instead of `~/.termix/tmux.conf`, so every tmux server start loads it natively (tmux only reads `~/.tmux.conf` / `~/.config/tmux/tmux.conf` at startup)
+- A pre-existing `~/.tmux.conf` the plugin did not generate is preserved once to `~/.tmux.conf.termix-backup` before the first overwrite; plugin-generated files and an existing backup are never re-copied
+- A running tmux server is now always re-sourced (`source-file ~/.tmux.conf`) on apply, previously skipped when the user snippet was empty
+
 ## 1.0.0
 
 ### Added

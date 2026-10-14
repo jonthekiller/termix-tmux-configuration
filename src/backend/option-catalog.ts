@@ -36,7 +36,7 @@ export interface TmuxEffectiveConfig {
  * Default extra tmux commands appended to every generated config file.
  * Vim-style copy mode and pane navigation, a minimal status bar and useful
  * bindings. The reload binding targets the file this plugin manages
- * (~/.termix/tmux.conf), not ~/.tmux.conf.
+ * (~/.tmux.conf), which tmux also reads at server start.
  *
  * Deliberately NO `terminal-overrides 'smcup@:rmcup@:indn@'`: stripping the
  * alternate-screen and scroll-region capabilities breaks mouse-wheel
@@ -66,7 +66,7 @@ set -g status-style "bg=black,fg=white"
 # Keybindings utiles
 # -----------------------------------------------------------------------------
 # Reload de la config gérée par le plugin
-bind r source-file ~/.termix/tmux.conf \\; display-message "Config reloaded!"
+bind r source-file ~/.tmux.conf \\; display-message "Config reloaded!"
 
 # Split panes
 bind | split-window -h

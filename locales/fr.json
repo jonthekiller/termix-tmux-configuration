@@ -45,7 +45,7 @@
   },
   "preview": {
     "title": "Prévisualisation de la configuration",
-    "fileHeading": "Poussé vers ~/.termix/tmux.conf",
+    "fileHeading": "Poussé vers ~/.tmux.conf",
     "commandsHeading": "Commandes exécutées sur les sessions live",
     "snippetHeading": "Extrait utilisateur (sourcé après le fichier généré)",
     "none": "Aucun hôte sélectionné.",

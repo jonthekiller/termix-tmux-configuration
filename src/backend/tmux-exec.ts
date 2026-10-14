@@ -131,8 +131,9 @@ export async function waitForTmuxSession(
 
 /**
  * Applies one configuration: pushes the generated file, sources it when a
- * server is running, then sets every live session's options. Returns the
- * number of sessions touched.
+ * server is running (a running server never re-reads ~/.tmux.conf on its
+ * own), then sets every live session's options. Returns the number of
+ * sessions touched.
  */
 export async function applyOnHost(
   conn: Client,
@@ -146,20 +147,18 @@ export async function applyOnHost(
 
   const detection = await detectTmux(conn);
   if (!detection.available || detection.sessions.length === 0) {
-    // The file is in place; the options take effect the next time a tmux
-    // server starts and the plugin sources it (or auto-apply fires).
+    // The file is in place; the next tmux server start reads it directly
+    // (auto-apply on terminal session open covers the rest).
     return { sessionsTouched: 0 };
   }
 
-  if (config.configSnippet.trim()) {
-    // The snippet only exists in the file, so a running server needs one
-    // source-file to pick it up (plus everything else in the file, which is
-    // idempotent).
-    await execCommand(
-      conn,
-      tmuxCommand(`source-file ${shellEscape(CONFIG_FILE_PATH)}`),
-    );
-  }
+  // A running server does not re-read ~/.tmux.conf on its own, so replay
+  // the file over it. The file is idempotent by construction, and sourcing
+  // is what carries the snippet (keybindings, status bar…) to the server.
+  await execCommand(
+    conn,
+    tmuxCommand(`source-file ${shellEscape(CONFIG_FILE_PATH)}`),
+  );
 
   await execCommand(conn, tmuxCommand(globalArgs));
 

@@ -6,7 +6,9 @@ import {
 } from "../../src/backend/option-catalog.js";
 import {
   buildConfigFile,
+  BACKUP_PATH,
   CONFIG_FILE_PATH,
+  GENERATED_MARKER,
   perSessionArgs,
   pushFileCommand,
   shellEscape,
@@ -106,5 +108,20 @@ describe("config generation", () => {
     // an older delimiter cannot terminate the document early.
     const other = pushFileCommand("x");
     expect(command).not.toBe(other);
+  });
+
+  it("backs up a foreign ~/.tmux.conf once before overwriting it", () => {
+    const command = pushFileCommand("set-option -g mouse on\n");
+    // The guard runs only when the file exists AND lacks the marker.
+    expect(command).toContain(
+      `if [ -f ${CONFIG_FILE_PATH} ] && ! grep -qs '${GENERATED_MARKER}' ${CONFIG_FILE_PATH}; then`,
+    );
+    // The first foreign config wins: an existing backup is never clobbered.
+    expect(command).toContain(`[ -f ${BACKUP_PATH} ] || cp`);
+  });
+
+  it("starts the generated file with the marker used by the backup guard", () => {
+    const file = buildConfigFile(DEFAULT_CONFIG);
+    expect(file.startsWith(GENERATED_MARKER)).toBe(true);
   });
 });
