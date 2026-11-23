@@ -2,26 +2,32 @@
  * The "tmux.sessions" service, as ssh-terminal consumes it.
  *
  * This is the replacement for tmux-monitor's provider: same contract (v1:
- * detect, attachOrCreate, waitForSession, clients and streams as unknown),
- * but attachOrCreate reads the plugin's effective per-host configuration
- * instead of the hardcoded mouse/history-limit pair, and names new sessions
- * after the host's sessionNamePattern when one is set. The terminal resolves
- * the single unnamed provider of the service, so this only runs when
- * tmux-monitor is disabled — activate() refuses the registration otherwise
- * (the registry would refuse it anyway) and the tab shows the state.
+ * detect, attachOrCreate, waitForSession), but attachOrCreate reads the
+ * plugin's effective per-host configuration instead of the hardcoded
+ * mouse/history-limit pair, and names new sessions after the host's
+ * sessionNamePattern when one is set. The terminal resolves the single
+ * unnamed provider of the service, so this only runs when tmux-monitor is
+ * disabled — activate() refuses the registration otherwise (the registry
+ * would refuse it anyway) and the tab shows the state.
+ *
+ * Under plugin API 2 the terminal cannot hand out ssh2 objects (they do not
+ * cross plugin processes): every call receives a shell handle —
+ * { termixShellKey, exec(command) -> {stdout, stderr, code}, write(data) } —
+ * whose termixShellKey is stable for one connection. exec answers a Promise,
+ * so nothing here may use the ssh2 callback API.
  *
  * Naming detail that matters: the terminal calls
- * `attachOrCreate(stream, undefined, suggestedName, hostId)` and then
- * `waitForSession(conn, suggestedName)` — the *suggested* name is the
+ * `attachOrCreate(shell, undefined, suggestedName, hostId)` and then
+ * `waitForSession(shell, suggestedName)` — the *suggested* name is the
  * terminal's own hardcoded `termix-<hostId>-<ts>`, not ours. When a pattern
- * renames the session, the generated name is recorded against the SSH client
- * the stream belongs to, and waitForSession checks that record first, so the
- * terminal tracks the real session name.
+ * renames the session, the generated name is recorded against the
+ * connection's termixShellKey (the handle objects differ per call), and
+ * waitForSession checks that record first, so the terminal tracks the real
+ * session name.
  */
 
-import type { Client, ClientChannel } from "ssh2";
-import { eq } from "drizzle-orm";
 import type { PluginContext } from "@termix-ssh/plugin-sdk/backend";
+import { eq } from "drizzle-orm";
 import {
   effectiveConfig,
   HOST_KEYS,
@@ -29,10 +35,33 @@ import {
 } from "./option-catalog.js";
 import { perSessionArgs, shellEscape } from "./config-builder.js";
 import { buildSessionName, isValidSessionName, withSuffix } from "./naming.js";
-import { detectTmux, tmuxCommand, waitForTmuxSession } from "./tmux-exec.js";
+import {
+  detectTmuxViaHandle,
+  tmuxCommand,
+  waitForTmuxSessionViaHandle,
+  type TmuxShellHandle,
+} from "./tmux-exec.js";
 
 /** How long a generated-name record answers waitForSession. */
 const GENERATED_NAME_TTL_MS = 30_000;
+
+/** Bounds the generated-name map: one entry per live connection, at most. */
+const GENERATED_NAME_MAX = 256;
+
+function asShellHandle(client: unknown): TmuxShellHandle {
+  const handle = client as Partial<TmuxShellHandle> | null;
+  if (
+    !handle ||
+    typeof handle.termixShellKey !== "string" ||
+    typeof handle.exec !== "function" ||
+    typeof handle.write !== "function"
+  ) {
+    throw new Error(
+      "tmux.sessions: the terminal passed no shell handle (plugin API 2 contract)",
+    );
+  }
+  return handle as TmuxShellHandle;
+}
 
 async function hostConfig(
   ctx: PluginContext,
@@ -91,7 +120,7 @@ async function pickName(
   config: TmuxEffectiveConfig,
   suggestedName: string | undefined,
   hostId: number | undefined,
-  conn: Client | undefined,
+  conn: TmuxShellHandle | undefined,
 ): Promise<string> {
   const fallback =
     suggestedName && isValidSessionName(suggestedName)
@@ -107,7 +136,7 @@ async function pickName(
   // The generated name must not collide with a live session; -2, -3, …
   const taken = new Set<string>();
   if (conn) {
-    const detection = await detectTmux(conn);
+    const detection = await detectTmuxViaHandle(conn);
     for (const session of detection.sessions) taken.add(session.name);
   }
   for (let attempt = 1; attempt <= 20; attempt++) {
@@ -118,13 +147,14 @@ async function pickName(
 }
 
 export function createTmuxSessionsService(ctx: PluginContext) {
-  // Generated name per SSH client, answered by waitForSession. A WeakMap so
-  // a closed connection's entry goes with the client object.
-  const generatedNames = new WeakMap<Client, { name: string; at: number }>();
+  // Generated name per connection, answered by waitForSession. Keyed by the
+  // handle's termixShellKey: the terminal builds a fresh handle object for
+  // every call, but the key is stable for one connection.
+  const generatedNames = new Map<string, { name: string; at: number }>();
 
   return {
-    detect(client: unknown) {
-      return detectTmux(client as Client);
+    async detect(client: unknown) {
+      return detectTmuxViaHandle(asShellHandle(client));
     },
 
     async attachOrCreate(
@@ -133,34 +163,39 @@ export function createTmuxSessionsService(ctx: PluginContext) {
       newName?: string,
       hostId?: number,
     ) {
+      const shell = asShellHandle(stream);
       const config = await hostConfig(ctx, hostId);
-      const client = (stream as ClientChannel)?._client as Client | undefined;
       if (name) {
         // Attach to an existing session, as asked.
-        (stream as ClientChannel).write(attachCommand(config, name, undefined));
+        shell.write(attachCommand(config, name, undefined));
         return;
       }
-      const sessionName = await pickName(ctx, config, newName, hostId, client);
+      const sessionName = await pickName(ctx, config, newName, hostId, shell);
       // A pattern rename has to be visible to the waitForSession that
       // follows, which still asks for the terminal's suggested name.
-      if (client && newName && sessionName !== newName) {
-        generatedNames.set(client, { name: sessionName, at: Date.now() });
+      if (newName && sessionName !== newName) {
+        if (generatedNames.size >= GENERATED_NAME_MAX) {
+          const oldest = generatedNames.keys().next().value;
+          if (oldest !== undefined) generatedNames.delete(oldest);
+        }
+        generatedNames.set(shell.termixShellKey, {
+          name: sessionName,
+          at: Date.now(),
+        });
       }
-      (stream as ClientChannel).write(
-        attachCommand(config, undefined, sessionName),
-      );
+      shell.write(attachCommand(config, undefined, sessionName));
     },
 
     async waitForSession(client: unknown, name: string) {
-      const clientKey = client as Client;
-      const generated = generatedNames.get(clientKey);
+      const shell = asShellHandle(client);
+      const generated = generatedNames.get(shell.termixShellKey);
       const ours =
         generated && Date.now() - generated.at < GENERATED_NAME_TTL_MS
           ? generated.name
           : null;
       const target = ours ?? name;
-      const confirmed = await waitForTmuxSession(clientKey, target);
-      if (generated) generatedNames.delete(clientKey);
+      const confirmed = await waitForTmuxSessionViaHandle(shell, target);
+      if (generated) generatedNames.delete(shell.termixShellKey);
       if (!confirmed) {
         ctx.log.warn(
           `Timed out waiting for a new tmux session to appear: ${target}`,

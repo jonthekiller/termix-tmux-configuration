@@ -15,9 +15,11 @@ const AUTO_APPLY_DEBOUNCE_MS = 30_000;
 /** and possibly the session creation, happen first. */
 const AUTO_APPLY_DELAY_MS = 4_000;
 
-function provideTmuxSessions(ctx: PluginContext): void {
+async function provideTmuxSessions(ctx: PluginContext): Promise<void> {
   // Declared in the manifest, so ctx.services.providers is callable.
-  const providers = ctx.services.providers("tmux.sessions");
+  // Under plugin API 2 the backend runs in its own process: this read and
+  // every call on another plugin's service answer a Promise.
+  const providers = await ctx.services.providers("tmux.sessions");
   if (providers.length > 0) {
     tmuxServiceState.conflictWith = "tmux-monitor";
     ctx.log.warn(
@@ -52,7 +54,7 @@ export async function activate(ctx: PluginContext) {
   registerRoutes(router, ctx, profilesTable, applyRunsTable);
   const tags = createSessionTagRepository(ctx.db, sessionTagsTable);
   router.use(createTmuxMonitorRoutes(ctx, tags));
-  provideTmuxSessions(ctx);
+  await provideTmuxSessions(ctx);
 
   // Refuse a malformed customOptions/environment object on any save path
   // (settings screen, host editor, host defaults level) instead of silently

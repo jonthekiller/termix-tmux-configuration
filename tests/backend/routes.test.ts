@@ -94,6 +94,8 @@ beforeEach(async () => {
     permissions: ["tmux-configuration.use"],
     hosts: HOSTS,
     sshClient: fakeSshClient(),
+    // The rules of a plugin process (API 2): plain data, declared events.
+    sandbox: true,
   });
   await activate(mock.ctx);
 

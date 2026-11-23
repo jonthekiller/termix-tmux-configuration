@@ -94,6 +94,8 @@ beforeEach(async () => {
     permissions: ["tmux-configuration.use", "tmux-configuration.sessions"],
     hosts: HOSTS,
     sshClient: monitorSshClient(),
+    // The rules of a plugin process (API 2): plain data, declared events.
+    sandbox: true,
   });
   await activate(mock.ctx);
 
@@ -127,6 +129,22 @@ describe("monitor routes", () => {
   it("refuses a host the plugin is disabled on", async () => {
     const { status } = await request("GET", "/1/overview");
     expect(status).toBe(403);
+  });
+
+  it("answers an untrusted host key with a 409 and the core's message", async () => {
+    await mock.ctx.settings.setHost(1, "enableTmuxConfiguration", true);
+    // What core's connect pipeline throws when nobody can confirm the key.
+    (mock.ctx.ssh as { withConnection: unknown }).withConnection = async () => {
+      throw new Error(
+        "This host's key is not trusted yet. Open a terminal to the host once to check and trust it.",
+      );
+    };
+    const { status, body } = await request("GET", "/1/overview");
+    // 4xx on purpose: an untrusted key is a predictable host condition and
+    // must stay out of the plugin's error budget.
+    expect(status).toBe(409);
+    expect(body.code).toBe("HOST_KEY_UNVERIFIED");
+    expect(body.error).toContain("not trusted yet");
   });
 
   it("serves the session tree with windows, panes and metrics-ready fields", async () => {

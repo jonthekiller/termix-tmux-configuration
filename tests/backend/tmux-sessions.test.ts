@@ -42,41 +42,33 @@ function fakeStream(): { written: string[]; asClient: unknown } {
     asClient: { write: (data: string) => void written.push(data) },
   };
 }
+// kept for the no-handle contract test above
 
 /**
- * A stream bound to an ssh2 client, like a real ClientChannel: the service
- * reads `stream._client` to remember generated names, and the same client
- * object reaches waitForSession.
+ * The shell handle the terminal's tmux.sessions consumer passes under
+ * plugin API 2: plain functions, no ssh2 objects. `exec` answers
+ * {stdout, stderr, code} like the real handle, `write` records the PTY
+ * input, and `termixShellKey` is stable for the fake connection.
  */
-function fakeStreamWithClient(): {
+function fakeHandle(execResults: Array<string> = []): {
   written: string[];
-  asClient: unknown;
-  client: unknown;
+  handle: unknown;
 } {
   const written: string[] = [];
-  const client = {
-    exec(
-      _command: string,
-      callback: (err: Error | null, stream?: unknown) => void,
-    ) {
-      const events = new Map<string, Array<(...args: unknown[]) => void>>();
-      const on = (event: string, listener: (...args: unknown[]) => void) => {
-        events.set(event, [...(events.get(event) ?? []), listener]);
-      };
-      const emit = (event: string, ...args: unknown[]) => {
-        for (const listener of events.get(event) ?? []) listener(...args);
-      };
-      callback(null, { on, stderr: { on } });
-      setTimeout(() => emit("close", 0), 0);
-    },
-  };
+  const commands: string[] = [];
+  let next = 0;
   return {
     written,
-    asClient: {
-      _client: client,
+    handle: {
+      termixShellKey: "conn-1",
+      exec: (command: string) => {
+        commands.push(command);
+        const stdout = execResults[next] ?? "";
+        next += 1;
+        return Promise.resolve({ stdout, stderr: "", code: 0 });
+      },
       write: (data: string) => void written.push(data),
     },
-    client,
   };
 }
 
@@ -141,8 +133,8 @@ describe("tmux.sessions service", () => {
     await mock.ctx.settings.setHost(1, "mouse", "off");
 
     const service = createTmuxSessionsService(mock.ctx);
-    const stream = fakeStream();
-    await service.attachOrCreate(stream.asClient, undefined, "build", 1);
+    const stream = fakeHandle();
+    await service.attachOrCreate(stream.handle, undefined, "build", 1);
 
     expect(stream.written).toHaveLength(1);
     expect(stream.written[0]).toContain("new-session -d -s ");
@@ -153,13 +145,8 @@ describe("tmux.sessions service", () => {
 
   it("falls back to the catalog defaults without a host id", async () => {
     const service = createTmuxSessionsService(mock.ctx);
-    const stream = fakeStream();
-    await service.attachOrCreate(
-      stream.asClient,
-      undefined,
-      "adhoc",
-      undefined,
-    );
+    const stream = fakeHandle();
+    await service.attachOrCreate(stream.handle, undefined, "adhoc", undefined);
     expect(stream.written[0]).toContain("history-limit 50000");
   });
 
@@ -171,8 +158,8 @@ describe("tmux.sessions service", () => {
     );
 
     const service = createTmuxSessionsService(mock.ctx);
-    const stream = fakeStream();
-    await service.attachOrCreate(stream.asClient, undefined, "termix-1-abc", 1);
+    const stream = fakeHandle();
+    await service.attachOrCreate(stream.handle, undefined, "termix-1-abc", 1);
 
     expect(stream.written[0]).toContain("termix-user-1-web-1");
     expect(stream.written[0]).not.toContain("termix-1-abc");
@@ -182,16 +169,40 @@ describe("tmux.sessions service", () => {
     await mock.ctx.settings.setHost(1, "sessionNamePattern", "{user}-{hostId}");
 
     const service = createTmuxSessionsService(mock.ctx);
-    const stream = fakeStreamWithClient();
-    // The stream carries its ssh2 client, like a real ClientChannel would.
-    const client = (stream.asClient as { _client: unknown })._client;
-    await service.attachOrCreate(stream.asClient, undefined, "termix-1-abc", 1);
-    expect(stream.written[0]).toContain("user-1-1");
+    // Like the real terminal: attachOrCreate and waitForSession receive
+    // different handle objects, but the same termixShellKey.
+    const attach = fakeHandle();
+    await service.attachOrCreate(attach.handle, undefined, "termix-1-abc", 1);
+    expect(attach.written[0]).toContain("user-1-1");
 
-    // The terminal still waits for its own suggested name; the service
-    // resolves it to the generated one.
-    const confirmed = await service.waitForSession(client, "termix-1-abc");
+    const wait = fakeHandle();
+    const confirmed = await service.waitForSession(wait.handle, "termix-1-abc");
     expect(confirmed).toBe("user-1-1");
+  });
+
+  it("rejects a consumer that passes no shell handle (API 2 contract)", async () => {
+    const service = createTmuxSessionsService(mock.ctx);
+    const stream = fakeStream();
+    await expect(
+      service.attachOrCreate(stream.asClient, undefined, "build", 1),
+    ).rejects.toThrow(/shell handle/);
+  });
+
+  it("detect reports the host's sessions through the shell handle", async () => {
+    const service = createTmuxSessionsService(mock.ctx);
+    const { handle } = fakeHandle([
+      "tmux 3.4",
+      "main|1700000000|1700000100|2|1",
+    ]);
+    const detection = await service.detect(handle);
+    expect(detection.available).toBe(true);
+    expect(detection.sessions[0]).toMatchObject({
+      name: "main",
+      created: 1700000000000,
+      lastActivity: 1700000100000,
+      windows: 2,
+      attachedClients: 1,
+    });
   });
 });
 
@@ -214,6 +225,8 @@ describe("tmux.sessions conflict", () => {
       router: () => (router = express.Router()),
       permissions: ["tmux-configuration.use", "tmux-configuration.sessions"],
       services: { "tmux.sessions": {} },
+      // The rules of a plugin process (API 2): plain data, declared events.
+      sandbox: true,
     });
     tmuxServiceState.provided = false;
     tmuxServiceState.conflictWith = null;

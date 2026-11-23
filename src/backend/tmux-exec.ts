@@ -62,8 +62,43 @@ export function execCommand(conn: Client, command: string): Promise<string> {
   });
 }
 
+/**
+ * The handle the ssh-terminal plugin hands the tmux.sessions service under
+ * plugin API 2: plain functions, since an ssh2 client cannot cross to
+ * another plugin's process. `termixShellKey` is stable for one connection,
+ * so it is the key services may record learned state under.
+ */
+export interface TmuxShellHandle {
+  termixShellKey: string;
+  exec: (command: string) => Promise<{
+    stdout: string;
+    stderr: string;
+    code: number | null;
+  }>;
+  write: (data: string) => void;
+}
+
+/**
+ * Runs one command through a shell handle, with execCommand's semantics:
+ * a non-zero exit with no stdout rejects. This is the only way to run
+ * commands when the caller is the terminal — the handle's exec takes no
+ * callback and answers a Promise.
+ */
+export async function execViaHandle(
+  handle: TmuxShellHandle,
+  command: string,
+): Promise<string> {
+  const { stdout, stderr, code } = await handle.exec(command);
+  if (code !== 0 && stdout.trim() === "") {
+    throw new Error(stderr.trim() || `Command exited with code ${code}`);
+  }
+  return stdout.trim();
+}
+
 export interface TmuxSessionSummary {
   name: string;
+  created?: number;
+  lastActivity?: number;
   windows: number;
   attachedClients: number;
 }
@@ -81,26 +116,65 @@ export async function detectTmux(
     return { available: false, sessions: [] };
   }
 
-  const sessions: TmuxSessionSummary[] = [];
+  const sessions = await listTmuxSessions((command) =>
+    execCommand(conn, command),
+  );
+  return { available: true, sessions };
+}
+
+/** Parses one `list-sessions` output line into a session summary. */
+function parseSessionLine(line: string): TmuxSessionSummary | null {
+  const [name, created, lastActivity, windows, attached] = line.split("|");
+  if (!name) return null;
+  return {
+    name,
+    created: created ? parseInt(created, 10) * 1000 : undefined,
+    lastActivity: lastActivity ? parseInt(lastActivity, 10) * 1000 : undefined,
+    windows: parseInt(windows, 10) || 0,
+    attachedClients: parseInt(attached, 10) || 0,
+  };
+}
+
+/**
+ * Runs `list-sessions` through a runner and parses the summaries, with the
+ * creation and activity timestamps the terminal's session picker reads.
+ */
+async function listTmuxSessions(
+  run: (command: string) => Promise<string>,
+): Promise<TmuxSessionSummary[]> {
+  const output = await run(
+    tmuxCommand(
+      `list-sessions -F "#{session_name}|#{session_created}|#{session_last_activity}|#{session_windows}|#{session_attached}" 2>/dev/null`,
+    ),
+  );
+  return output
+    .split("\n")
+    .filter(Boolean)
+    .map(parseSessionLine)
+    .filter((s): s is TmuxSessionSummary => s !== null);
+}
+
+/**
+ * Same detection as detectTmux, through the shell handle the terminal's
+ * tmux.sessions consumer passes under plugin API 2.
+ */
+export async function detectTmuxViaHandle(
+  handle: TmuxShellHandle,
+): Promise<{ available: boolean; sessions: TmuxSessionSummary[] }> {
   try {
-    const output = await execCommand(
-      conn,
-      tmuxCommand(
-        `list-sessions -F "#{session_name}|#{session_windows}|#{session_attached}" 2>/dev/null`,
-      ),
+    await execViaHandle(handle, tmuxCommand("-V"));
+  } catch {
+    return { available: false, sessions: [] };
+  }
+  try {
+    const sessions = await listTmuxSessions((command) =>
+      execViaHandle(handle, command),
     );
-    for (const line of output.split("\n").filter(Boolean)) {
-      const [name, windows, attached] = line.split("|");
-      sessions.push({
-        name,
-        windows: parseInt(windows, 10) || 0,
-        attachedClients: parseInt(attached, 10) || 0,
-      });
-    }
+    return { available: true, sessions };
   } catch {
     // No tmux server running yet: no sessions, nothing to apply live.
+    return { available: true, sessions: [] };
   }
-  return { available: true, sessions };
 }
 
 /**
@@ -118,6 +192,32 @@ export async function waitForTmuxSession(
     try {
       await execCommand(
         conn,
+        tmuxCommand(`has-session -t ${shellEscape(sessionName)} 2>/dev/null`),
+      );
+      return sessionName;
+    } catch {
+      // Session not ready yet.
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  return null;
+}
+
+/**
+ * Waits for a named session through a shell handle (the terminal's
+ * tmux.sessions consumer passes handles, not ssh2 clients).
+ */
+export async function waitForTmuxSessionViaHandle(
+  handle: TmuxShellHandle,
+  sessionName: string,
+  timeoutMs = 5000,
+  intervalMs = 100,
+): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      await execViaHandle(
+        handle,
         tmuxCommand(`has-session -t ${shellEscape(sessionName)} 2>/dev/null`),
       );
       return sessionName;

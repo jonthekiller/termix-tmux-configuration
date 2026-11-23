@@ -1,7 +1,7 @@
 {
   "id": "tmux-configuration",
   "name": "Tmux Configuration",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "description": "Manage the tmux configuration of your hosts: per host, per folder, per tag or for every machine, with server/user/folder defaults, profiles and one-click (or automatic) application over SSH.",
   "author": {
     "name": "Jonthekiller",
@@ -12,8 +12,11 @@
   "category": "Terminal",
   "icon": "Settings2",
   "engine": {
-    "termix": ">=26.10.0",
-    "api": "^1.2"
+    "termix": ">=26.11.2",
+    "api": "^2.0.0"
+  },
+  "sandbox": {
+    "events": ["host.session.status"]
   },
   "capabilities": [
     "hosts:read",

@@ -1,7 +1,7 @@
 {
   "name": "termix-plugin-tmux-configuration",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.1",
   "type": "module",
   "scripts": {
     "build": "termix-plugin build && node scripts/postbuild.mjs",
@@ -18,7 +18,8 @@
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.0",
-    "@termix-ssh/plugin-sdk": "^1.0.6",
+    "@termix-ssh/plugin-sdk": "^2.11.0",
+    "@testing-library/react": "^16.3.3",
     "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
@@ -27,10 +28,14 @@
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "husky": "^9.1.7",
+    "i18next": "^26.7.2",
     "jsdom": "^30.0.1",
     "lint-staged": "^17.2.0",
     "prettier": "3.9.9",
     "react": "^19.2.8",
+    "react-dom": "^19.3.1",
+    "react-i18next": "^17.1.13",
+    "sonner": "^2.0.8",
     "ssh2": "^1.17.0",
     "typescript": "~6.0.3",
     "vitest": "^4.1.11"
@@ -39,6 +44,12 @@
     "*.{ts,tsx,js,jsx,mjs,cjs,json,css,md}": [
       "prettier --write"
     ]
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.45.2",
+    "express": "^5.2.1",
+    "react": "^19.2.8",
+    "ssh2": "^1.17.0"
   },
   "dependencies": {
     "lucide-react": "^0.544.0"

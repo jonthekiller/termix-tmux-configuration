@@ -67,7 +67,7 @@ npx vitest run               # tests
 npx termix-plugin build      # dist/backend.js + dist/frontend.js
 ```
 
-Requires **Termix 26.10+** (plugin API ^1.2) with the plugins loader enabled. For a Termix 2.9 server, build with `node scripts/postbuild.mjs --legacy` after `npm run build` (see DEPLOY-DOCKER.md).
+Requires **Termix 26.11.2+** (plugin API ^2.0.0) with the plugins loader enabled. The plugin backend runs in its own sandboxed process and the frontend in a sandboxed frame, the way Termix 26.11.2+ (including 26.11.3) loads every API 2 plugin. An API 1 plugin (1.1.1 and earlier) does not run on these cores — update to 1.2.0 before upgrading the server.
 
 Running Termix in Docker? See [DEPLOY-DOCKER.md](DEPLOY-DOCKER.md): mount the built plugin under `/app/data/plugins/` (or drop a `.tmxplug` there), grant the capabilities, enable it — and how to switch tmux-monitor off for good. `deploy/prepare.sh` builds and lays the folder out; `deploy/docker-compose.example.yml` is a ready-to-adapt compose file.
 

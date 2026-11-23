@@ -1,6 +1,6 @@
 # Deploying into Docker
 
-How to run this plugin inside a Dockerized Termix (image `ghcr.io/lukegus/termix`). Validated against `26.10.0` and `2.9.2`.
+How to run this plugin inside a Dockerized Termix (image `ghcr.io/lukegus/termix`). Validated against `26.11.2` (plugin API 2). The plugin requires Termix 26.11.2+ (`engine.termix >=26.11.2`, `engine.api ^2.0.0`); the legacy `2.9.x` server and the `--legacy` postbuild mode no longer apply to 1.2.0.
 
 ## How Termix loads plugins
 

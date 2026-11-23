@@ -49,10 +49,21 @@ function toErrorMessage(err: unknown): string {
 }
 
 type TmuxErrorCode =
-  "TMUX_NOT_INSTALLED" | "TMUX_NO_SERVER" | "HOST_UNREACHABLE" | "TMUX_ERROR";
+  | "TMUX_NOT_INSTALLED"
+  | "TMUX_NO_SERVER"
+  | "HOST_UNREACHABLE"
+  | "HOST_KEY_UNVERIFIED"
+  | "HOST_KEY_CHANGED"
+  | "TMUX_ERROR";
 
 function classifyTmuxError(err: unknown): TmuxErrorCode {
   const msg = toErrorMessage(err);
+  // The core's own codes, surfaced by its connect pipeline (an untrusted or
+  // changed host key): pass them through so the frontend shows the exact
+  // message instead of a generic tmux failure.
+  if (/key has changed|HOST_KEY_CHANGED/i.test(msg)) return "HOST_KEY_CHANGED";
+  if (/not trusted yet|HOST_KEY_UNVERIFIED|verification failed/i.test(msg))
+    return "HOST_KEY_UNVERIFIED";
   if (/command not found|exited with code 127/i.test(msg))
     return "TMUX_NOT_INSTALLED";
   if (/no server running|lost server/i.test(msg)) return "TMUX_NO_SERVER";
@@ -73,7 +84,13 @@ function sendTmuxError(
   hostId: number,
 ): void {
   const code = classifyTmuxError(err);
-  const status = code === "TMUX_ERROR" ? 500 : 503;
+  // A 4xx sent on purpose does not count against the plugin's error budget
+  // (5 non-4xx errors in a minute and Termix turns the plugin off), so every
+  // predictable host condition answers 4xx. Only a genuinely unexpected tmux
+  // failure is still a 500. The body's `code` field, which the frontend keys
+  // off, is unchanged.
+  const status =
+    code === "TMUX_ERROR" ? 500 : code === "TMUX_NOT_INSTALLED" ? 400 : 409;
   const error =
     code === "TMUX_NOT_INSTALLED"
       ? "tmux is not installed on this host"
