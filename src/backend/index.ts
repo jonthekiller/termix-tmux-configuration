@@ -22,6 +22,7 @@ async function provideTmuxSessions(ctx: PluginContext): Promise<void> {
   const providers = await ctx.services.providers("tmux.sessions");
   if (providers.length > 0) {
     tmuxServiceState.conflictWith = "tmux-monitor";
+    tmuxServiceState.lastError = null;
     ctx.log.warn(
       `tmux.sessions is already provided (${providers.filter(Boolean).join(", ") || "another plugin"}); ` +
         "the terminal keeps its provider. Disable Tmux Monitor to have Tmux Configuration drive session creation.",
@@ -31,17 +32,44 @@ async function provideTmuxSessions(ctx: PluginContext): Promise<void> {
   try {
     ctx.services.provide("tmux.sessions", createTmuxSessionsService(ctx));
     tmuxServiceState.provided = true;
+    tmuxServiceState.conflictWith = null;
+    tmuxServiceState.providedAt = new Date().toISOString();
+    tmuxServiceState.lastError = null;
     ctx.log.info(
       "Providing tmux.sessions: session creation follows the plugin's per-host configuration",
     );
   } catch (error) {
     // Activation order is not stable: if tmux-monitor won the race it is
     // already registered by now. Yield rather than fail.
+    const message =
+      error instanceof Error ? error.message : String(error);
     tmuxServiceState.conflictWith = "tmux-monitor";
-    ctx.log.warn(
-      `Could not provide tmux.sessions: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    tmuxServiceState.lastError = message;
+    ctx.log.warn(`Could not provide tmux.sessions: ${message}`);
   }
+}
+
+/**
+ * Adds the plugin's section to the admin diagnostics report (Termix
+ * 26.11.3): whether tmux.sessions registered and the recent service calls.
+ * The report is where "the terminal's session menu is missing" becomes
+ * readable — the terminal swallows our errors, so the ring is the trace.
+ */
+function provideDiagnostics(ctx: PluginContext): void {
+  const diagnostics = ctx.diagnostics;
+  if (typeof diagnostics?.provide !== "function") return;
+  diagnostics.provide({
+    title: "Tmux Configuration — tmux.sessions",
+    collect: () => ({
+      service: {
+        provided: tmuxServiceState.provided,
+        conflictWith: tmuxServiceState.conflictWith,
+        providedAt: tmuxServiceState.providedAt,
+        lastError: tmuxServiceState.lastError,
+      },
+      recentCalls: tmuxServiceState.calls.slice(-20).reverse(),
+    }),
+  });
 }
 
 export async function activate(ctx: PluginContext) {
@@ -55,6 +83,7 @@ export async function activate(ctx: PluginContext) {
   const tags = createSessionTagRepository(ctx.db, sessionTagsTable);
   router.use(createTmuxMonitorRoutes(ctx, tags));
   await provideTmuxSessions(ctx);
+  provideDiagnostics(ctx);
 
   // Refuse a malformed customOptions/environment object on any save path
   // (settings screen, host editor, host defaults level) instead of silently

@@ -116,6 +116,7 @@ describe("tmux.sessions service", () => {
     mock.setActor("user-1");
     tmuxServiceState.provided = false;
     tmuxServiceState.conflictWith = null;
+    tmuxServiceState.calls.length = 0;
     await activate(mock.ctx);
   });
 
@@ -202,6 +203,55 @@ describe("tmux.sessions service", () => {
       lastActivity: 1700000100000,
       windows: 2,
       attachedClients: 1,
+    });
+  });
+
+  it("detect accepts a handle without write and still runs (menu trace)", async () => {
+    const service = createTmuxSessionsService(mock.ctx);
+    const { handle } = fakeHandle(["tmux 3.4", "main|1|1|1|0"]);
+    const bare = handle as { write?: unknown; exec: unknown; termixShellKey: string };
+    delete bare.write;
+    const detection = await service.detect(bare);
+    expect(detection.available).toBe(true);
+    expect(detection.sessions[0]?.name).toBe("main");
+  });
+
+  it("records every service call in the diagnostics ring", async () => {
+    const service = createTmuxSessionsService(mock.ctx);
+    const { handle } = fakeHandle([
+      "tmux 3.4",
+      "main|1700000000|1700000100|2|1",
+    ]);
+    await service.detect(handle);
+
+    const detectRecord = tmuxServiceState.calls.at(-1);
+    expect(detectRecord).toMatchObject({ call: "detect", ok: true });
+    expect(detectRecord?.detail).toContain("1 session(s)");
+    expect(detectRecord?.ms).toBeGreaterThanOrEqual(0);
+
+    const stream = fakeHandle();
+    await service.attachOrCreate(stream.handle, undefined, "build", 1);
+    expect(tmuxServiceState.calls.at(-1)).toMatchObject({
+      call: "attachOrCreate",
+      ok: true,
+      detail: "created build",
+    });
+  });
+
+  it("records a failing detect with its stage and reason", async () => {
+    const service = createTmuxSessionsService(mock.ctx);
+    const failing = {
+      termixShellKey: "conn-1",
+      exec: () => Promise.resolve({ stdout: "", stderr: "tmux: not found", code: 127 }),
+      write: () => {},
+    };
+    const detection = await service.detect(failing);
+    expect(detection.available).toBe(false);
+    const record = tmuxServiceState.calls.at(-1);
+    expect(record).toMatchObject({
+      call: "detect",
+      ok: false,
+      detail: "tmux binary not found",
     });
   });
 });

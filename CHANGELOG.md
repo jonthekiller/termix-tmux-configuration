@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.2
+
+### Added
+
+- Diagnosability for the "the terminal's session menu is missing while tmux sessions exist" failure: every `tmux.sessions` call (`detect`, `attachOrCreate`, `waitForSession`) is logged with its outcome and duration, and kept in a 50-entry ring that a new admin diagnostics section (Termix 26.11.3's diagnostics report, guarded for 26.11.2) exposes together with the service registration state (`provided`, `conflictWith`, `providedAt`, `lastError`). `detectTmuxViaHandle` now reports the swallowed stage and reason (version check vs list-sessions) instead of failing silently — the terminal swallows our errors, so this ring is the trace
+
+### Fixed
+
+- `detect` accepts a shell handle without `write`: only `exec` is needed to run commands, and refusing the terminal's handle there would blind the session menu on every host (attach/create still require `write`)
+
 ## 1.2.1
 
 ### Fixed

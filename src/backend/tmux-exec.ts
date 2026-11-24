@@ -156,14 +156,18 @@ async function listTmuxSessions(
 
 /**
  * Same detection as detectTmux, through the shell handle the terminal's
- * tmux.sessions consumer passes under plugin API 2.
+ * tmux.sessions consumer passes under plugin API 2. `onError` receives the
+ * stage and the swallowed error, so a failing detection is diagnosable —
+ * without it "no menu in the terminal" has no trace anywhere.
  */
 export async function detectTmuxViaHandle(
   handle: TmuxShellHandle,
+  onError?: (stage: "version-check" | "list-sessions", error: unknown) => void,
 ): Promise<{ available: boolean; sessions: TmuxSessionSummary[] }> {
   try {
     await execViaHandle(handle, tmuxCommand("-V"));
-  } catch {
+  } catch (error) {
+    onError?.("version-check", error);
     return { available: false, sessions: [] };
   }
   try {
@@ -171,8 +175,9 @@ export async function detectTmuxViaHandle(
       execViaHandle(handle, command),
     );
     return { available: true, sessions };
-  } catch {
+  } catch (error) {
     // No tmux server running yet: no sessions, nothing to apply live.
+    onError?.("list-sessions", error);
     return { available: true, sessions: [] };
   }
 }

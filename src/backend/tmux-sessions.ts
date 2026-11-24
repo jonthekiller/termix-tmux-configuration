@@ -41,6 +41,7 @@ import {
   waitForTmuxSessionViaHandle,
   type TmuxShellHandle,
 } from "./tmux-exec.js";
+import { recordTmuxServiceCall } from "./service-state.js";
 
 /** How long a generated-name record answers waitForSession. */
 const GENERATED_NAME_TTL_MS = 30_000;
@@ -48,16 +49,26 @@ const GENERATED_NAME_TTL_MS = 30_000;
 /** Bounds the generated-name map: one entry per live connection, at most. */
 const GENERATED_NAME_MAX = 256;
 
-function asShellHandle(client: unknown): TmuxShellHandle {
+function asShellHandle(
+  client: unknown,
+  options?: { allowMissingWrite?: boolean },
+): TmuxShellHandle {
   const handle = client as Partial<TmuxShellHandle> | null;
+  const writeOk =
+    handle === null
+      ? false
+      : handle.write === undefined
+        ? options?.allowMissingWrite === true
+        : typeof handle.write === "function";
   if (
     !handle ||
     typeof handle.termixShellKey !== "string" ||
     typeof handle.exec !== "function" ||
-    typeof handle.write !== "function"
+    !writeOk
   ) {
     throw new Error(
-      "tmux.sessions: the terminal passed no shell handle (plugin API 2 contract)",
+      "tmux.sessions: the terminal passed no shell handle (plugin API 2 contract)" +
+        (options?.allowMissingWrite ? " (write optional here)" : ""),
     );
   }
   return handle as TmuxShellHandle;
@@ -146,15 +157,61 @@ async function pickName(
   return fallback;
 }
 
+/** One line out of an unknown error, safe for logs and diagnostics. */
+function errorMessage(error: unknown): string {
+  return (error instanceof Error ? error.message : String(error)).slice(0, 200);
+}
+
 export function createTmuxSessionsService(ctx: PluginContext) {
   // Generated name per connection, answered by waitForSession. Keyed by the
   // handle's termixShellKey: the terminal builds a fresh handle object for
   // every call, but the key is stable for one connection.
   const generatedNames = new Map<string, { name: string; at: number }>();
+  // Every call lands here: the terminal's session menu missing while tmux
+  // sessions exist is exactly the failure nobody could see before.
+  const record = (
+    call: "detect" | "attachOrCreate" | "waitForSession",
+    startedAt: number,
+    ok: boolean,
+    detail: string,
+  ): void => {
+    recordTmuxServiceCall({
+      call,
+      ms: Date.now() - startedAt,
+      ok,
+      detail,
+    });
+  };
 
   return {
     async detect(client: unknown) {
-      return detectTmuxViaHandle(asShellHandle(client));
+      const startedAt = Date.now();
+      try {
+        // detect only runs commands: the terminal may hand a handle without
+        // write here, and refusing it would blind the session menu.
+        const shell = asShellHandle(client, { allowMissingWrite: true });
+        const detection = await detectTmuxViaHandle(shell, (stage, error) => {
+          ctx.log.warn(
+            `tmux.sessions detect: ${stage} failed: ${errorMessage(error)}`,
+          );
+        });
+        record(
+          "detect",
+          startedAt,
+          detection.available,
+          detection.available
+            ? `tmux present, ${detection.sessions.length} session(s)`
+            : "tmux binary not found",
+        );
+        ctx.log.info(
+          `tmux.sessions detect: ${detection.available ? `available, ${detection.sessions.length} session(s)` : "tmux not found"} (${Date.now() - startedAt}ms)`,
+        );
+        return detection;
+      } catch (error) {
+        record("detect", startedAt, false, errorMessage(error));
+        ctx.log.warn(`tmux.sessions detect failed: ${errorMessage(error)}`);
+        throw error;
+      }
     },
 
     async attachOrCreate(
@@ -163,48 +220,93 @@ export function createTmuxSessionsService(ctx: PluginContext) {
       newName?: string,
       hostId?: number,
     ) {
-      const shell = asShellHandle(stream);
-      const config = await hostConfig(ctx, hostId);
-      if (name) {
-        // Attach to an existing session, as asked.
-        shell.write(attachCommand(config, name, undefined));
-        return;
-      }
-      const sessionName = await pickName(ctx, config, newName, hostId, shell);
-      // A pattern rename has to be visible to the waitForSession that
-      // follows, which still asks for the terminal's suggested name.
-      if (newName && sessionName !== newName) {
-        if (generatedNames.size >= GENERATED_NAME_MAX) {
-          const oldest = generatedNames.keys().next().value;
-          if (oldest !== undefined) generatedNames.delete(oldest);
+      const startedAt = Date.now();
+      try {
+        const shell = asShellHandle(stream);
+        const config = await hostConfig(ctx, hostId);
+        if (name) {
+          // Attach to an existing session, as asked.
+          record("attachOrCreate", startedAt, true, `attach to ${name}`);
+          ctx.log.info(`tmux.sessions: attaching to session ${name}`);
+          shell.write(attachCommand(config, name, undefined));
+          return;
         }
-        generatedNames.set(shell.termixShellKey, {
-          name: sessionName,
-          at: Date.now(),
-        });
+        const sessionName = await pickName(ctx, config, newName, hostId, shell);
+        // A pattern rename has to be visible to the waitForSession that
+        // follows, which still asks for the terminal's suggested name.
+        if (newName && sessionName !== newName) {
+          if (generatedNames.size >= GENERATED_NAME_MAX) {
+            const oldest = generatedNames.keys().next().value;
+            if (oldest !== undefined) generatedNames.delete(oldest);
+          }
+          generatedNames.set(shell.termixShellKey, {
+            name: sessionName,
+            at: Date.now(),
+          });
+        }
+        record(
+          "attachOrCreate",
+          startedAt,
+          true,
+          newName && sessionName !== newName
+            ? `created ${sessionName} (suggested ${newName})`
+            : `created ${sessionName}`,
+        );
+        ctx.log.info(
+          `tmux.sessions: creating session ${sessionName}` +
+            (newName && sessionName !== newName ? ` (suggested: ${newName})` : ""),
+        );
+        shell.write(attachCommand(config, undefined, sessionName));
+      } catch (error) {
+        record("attachOrCreate", startedAt, false, errorMessage(error));
+        ctx.log.warn(
+          `tmux.sessions attachOrCreate failed: ${errorMessage(error)}`,
+        );
+        throw error;
       }
-      shell.write(attachCommand(config, undefined, sessionName));
     },
 
     async waitForSession(client: unknown, name: string) {
-      const shell = asShellHandle(client);
-      const generated = generatedNames.get(shell.termixShellKey);
-      const ours =
-        generated && Date.now() - generated.at < GENERATED_NAME_TTL_MS
-          ? generated.name
-          : null;
-      const target = ours ?? name;
-      const confirmed = await waitForTmuxSessionViaHandle(shell, target);
-      if (generated) generatedNames.delete(shell.termixShellKey);
-      if (!confirmed) {
-        ctx.log.warn(
-          `Timed out waiting for a new tmux session to appear: ${target}`,
+      const startedAt = Date.now();
+      try {
+        const shell = asShellHandle(client, { allowMissingWrite: true });
+        const generated = generatedNames.get(shell.termixShellKey);
+        const ours =
+          generated && Date.now() - generated.at < GENERATED_NAME_TTL_MS
+            ? generated.name
+            : null;
+        const target = ours ?? name;
+        const confirmed = await waitForTmuxSessionViaHandle(shell, target);
+        if (generated) generatedNames.delete(shell.termixShellKey);
+        if (!confirmed) {
+          ctx.log.warn(
+            `Timed out waiting for a new tmux session to appear: ${target}`,
+          );
+          record(
+            "waitForSession",
+            startedAt,
+            false,
+            `timeout waiting for ${target}`,
+          );
+          // The terminal stores whatever comes back; the generated name is the
+          // truth when it was ours, the caller's when nothing else fits.
+          return ours ?? name;
+        }
+        record(
+          "waitForSession",
+          startedAt,
+          true,
+          `confirmed ${confirmed}`,
         );
-        // The terminal stores whatever comes back; the generated name is the
-        // truth when it was ours, the caller's when nothing else fits.
-        return ours ?? name;
+        ctx.log.info(
+          `tmux.sessions: session ${confirmed} confirmed (${Date.now() - startedAt}ms)`,
+        );
+        return confirmed;
+      } catch (error) {
+        record("waitForSession", startedAt, false, errorMessage(error));
+        ctx.log.warn(`tmux.sessions waitForSession failed: ${errorMessage(error)}`);
+        throw error;
       }
-      return confirmed;
     },
   };
 }
