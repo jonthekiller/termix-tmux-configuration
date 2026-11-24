@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3
+
+### Fixed
+
+- The terminal's session menu failing with "The plugin no longer provides this [op:plugin:ssh-terminal]" after the plugin sat idle: under plugin API 2 the plugin process stops when idle, and the terminal's `tmux.sessions` call does not wake it — the core answers as if the service were gone, so no session is listed or proposed until the plugin restarts (the monitor kept working because HTTP routes do wake the process). While the plugin provides `tmux.sessions` it now holds a `ctx.schedule.keepAwake` reason, keeping the provider process running; the reason is released on deactivate and reported in the diagnostics section (`keepAwake`)
+
 ## 1.2.2
 
 ### Added

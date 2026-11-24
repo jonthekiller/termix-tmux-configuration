@@ -15,6 +15,9 @@ const AUTO_APPLY_DEBOUNCE_MS = 30_000;
 /** and possibly the session creation, happen first. */
 const AUTO_APPLY_DELAY_MS = 4_000;
 
+/** Kept for deactivate: the awake reason is released there. */
+let activeCtx: PluginContext | null = null;
+
 async function provideTmuxSessions(ctx: PluginContext): Promise<void> {
   // Declared in the manifest, so ctx.services.providers is callable.
   // Under plugin API 2 the backend runs in its own process: this read and
@@ -35,8 +38,18 @@ async function provideTmuxSessions(ctx: PluginContext): Promise<void> {
     tmuxServiceState.conflictWith = null;
     tmuxServiceState.providedAt = new Date().toISOString();
     tmuxServiceState.lastError = null;
+    // The plugin process stops when idle (API 2), and the terminal's
+    // tmux.sessions call does not wake it — it answers "the plugin no
+    // longer provides this" (op:plugin:ssh-terminal), so the session
+    // menu vanishes until a plugin restart. Holding an awake reason
+    // keeps the provider process running for the terminal.
+    if (ctx.schedule?.keepAwake) {
+      ctx.schedule.keepAwake("tmux.sessions", true);
+      tmuxServiceState.keepAwake = true;
+    }
     ctx.log.info(
-      "Providing tmux.sessions: session creation follows the plugin's per-host configuration",
+      "Providing tmux.sessions: session creation follows the plugin's per-host configuration" +
+        (tmuxServiceState.keepAwake ? " (process held awake)" : ""),
     );
   } catch (error) {
     // Activation order is not stable: if tmux-monitor won the race it is
@@ -66,6 +79,7 @@ function provideDiagnostics(ctx: PluginContext): void {
         conflictWith: tmuxServiceState.conflictWith,
         providedAt: tmuxServiceState.providedAt,
         lastError: tmuxServiceState.lastError,
+        keepAwake: tmuxServiceState.keepAwake,
       },
       recentCalls: tmuxServiceState.calls.slice(-20).reverse(),
     }),
@@ -73,6 +87,7 @@ function provideDiagnostics(ctx: PluginContext): void {
 }
 
 export async function activate(ctx: PluginContext) {
+  activeCtx = ctx;
   const profilesTable = await ctx.db.define(profiles);
   const applyRunsTable = await ctx.db.define(applyRuns);
   const sessionTagsTable = await ctx.db.define(sessionTags);
@@ -139,5 +154,13 @@ export async function activate(ctx: PluginContext) {
 }
 
 export async function deactivate() {
-  // Everything registered through ctx is disposed by core.
+  // Everything registered through ctx is disposed by core, but the awake
+  // reason is ours to release.
+  try {
+    activeCtx?.schedule?.keepAwake?.("tmux.sessions", false);
+  } catch {
+    // Deactivation must never fail on this.
+  }
+  tmuxServiceState.keepAwake = false;
+  activeCtx = null;
 }

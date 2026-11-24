@@ -116,6 +116,7 @@ describe("tmux.sessions service", () => {
     mock.setActor("user-1");
     tmuxServiceState.provided = false;
     tmuxServiceState.conflictWith = null;
+    tmuxServiceState.keepAwake = false;
     tmuxServiceState.calls.length = 0;
     await activate(mock.ctx);
   });
@@ -127,6 +128,11 @@ describe("tmux.sessions service", () => {
   it("is provided on activation when no other plugin holds the service", () => {
     expect(mock.services.has("tmux.sessions")).toBe(true);
     expect(tmuxServiceState.provided).toBe(true);
+    // The provider process must stay awake: the terminal's tmux.sessions
+    // call does not wake a stopped process — it answers "the plugin no
+    // longer provides this" and the session menu vanishes.
+    expect(mock.awake.has("tmux.sessions")).toBe(true);
+    expect(tmuxServiceState.keepAwake).toBe(true);
   });
 
   it("writes the host's effective options at session creation", async () => {

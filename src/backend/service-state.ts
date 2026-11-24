@@ -30,8 +30,17 @@ export const tmuxServiceState: {
   providedAt: string | null;
   /** Last registration or service-level error message, one line. */
   lastError: string | null;
+  /** True while the keepAwake reason holds the provider process open. */
+  keepAwake: boolean;
   calls: TmuxServiceCallRecord[];
-} = { provided: false, conflictWith: null, providedAt: null, lastError: null, calls: [] };
+} = {
+  provided: false,
+  conflictWith: null,
+  providedAt: null,
+  lastError: null,
+  keepAwake: false,
+  calls: [],
+};
 
 /** Records one service call in the diagnostics ring (oldest entries drop). */
 export function recordTmuxServiceCall(

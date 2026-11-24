@@ -1,7 +1,7 @@
 {
   "id": "tmux-configuration",
   "name": "Tmux Configuration",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Manage the tmux configuration of your hosts: per host, per folder, per tag or for every machine, with server/user/folder defaults, profiles and one-click (or automatic) application over SSH.",
   "author": {
     "name": "Jonthekiller",
